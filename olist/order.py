@@ -87,10 +87,23 @@ class Order:
 
     def get_number_items(self):
         """
-        Returns a DataFrame with:
-        order_id, number_of_items
+        Returns a DataFrame with order_id and number_of_items.
+
+        Example:
+            >>> order = Order()
+            >>> df = order.get_number_items()
+            >>> df['number_of_items'].iloc[0] >= 1
         """
-        pass  # YOUR CODE HERE
+        # Notebook'ta test ettiğin mantığın aynısı:
+        items_raw = self.data['order_items'].copy()
+
+        # Gruplama ve sayma işlemi
+        items_count = items_raw.groupby('order_id').count()[['product_id']]
+
+        # İsimlendirme ve indeksi sütuna çekme
+        items_count.columns = ['number_of_items']
+
+        return items_count.reset_index()
 
     def get_number_sellers(self):
         """
