@@ -17,10 +17,54 @@ class Order:
         """
         Returns a DataFrame with:
         [order_id, wait_time, expected_wait_time, delay_vs_expected, order_status]
-        and filters out non-delivered orders unless specified
+        Calculates times in decimal days and filters by status if specified.
+
+        Example:
+            >>> order_instance = Order()
+            >>> df = order_instance.get_wait_time(is_delivered=True)
+            >>> df.shape[1] == 5
         """
-        # Hint: Within this instance method, you have access to the instance of the class Order in the variable self, as well as all its attributes
-        pass  # YOUR CODE HERE
+        # Inspect the 'orders' DataFrame from the instance attribute
+        orders = self.data['orders'].copy()
+
+        # Filter the DataFrame on 'delivered' orders if requested
+        if is_delivered:
+            orders = orders.query('order_status == "delivered"').copy()
+
+        # Handle datetime conversions using pandas.to_datetime()
+        # This converts string dates to pandas datetime objects
+        orders['order_purchase_timestamp'] = pd.to_datetime(orders['order_purchase_timestamp'])
+        orders['order_delivered_customer_date'] = pd.to_datetime(orders['order_delivered_customer_date'])
+        orders['order_estimated_delivery_date'] = pd.to_datetime(orders['order_estimated_delivery_date'])
+
+        # Calculate 'wait_time' in decimal days starting from 'order_purchase_timestamp'
+        # We divide by np.timedelta64(1, 'D') to get the float representation
+        orders['wait_time'] = (
+            orders['order_delivered_customer_date'] - orders['order_purchase_timestamp']
+        ) / np.timedelta64(1, 'D')
+
+        # Calculate 'expected_wait_time' in decimal days
+        orders['expected_wait_time'] = (
+            orders['order_estimated_delivery_date'] - orders['order_purchase_timestamp']
+        ) / np.timedelta64(1, 'D')
+
+        # Calculate 'delay_vs_expected' in decimal days
+        # If the order was delivered earlier than expected, set it to 0
+        orders['delay_vs_expected'] = (
+            orders['order_delivered_customer_date'] - orders['order_estimated_delivery_date']
+        ) / np.timedelta64(1, 'D')
+
+        # Using clip(lower=0) ensures we replace negative delays with 0
+        orders['delay_vs_expected'] = orders['delay_vs_expected'].clip(lower=0)
+
+        # Final DataFrame check (selecting only requested columns)
+        return orders[[
+            'order_id',
+            'wait_time',
+            'expected_wait_time',
+            'delay_vs_expected',
+            'order_status'
+        ]]
 
     def get_review_score(self):
         """
