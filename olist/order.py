@@ -68,10 +68,22 @@ class Order:
 
     def get_review_score(self):
         """
-        Returns a DataFrame with:
-        order_id, dim_is_five_star, dim_is_one_star, review_score
+        Returns a DataFrame with order_id, dim_is_five_star, dim_is_one_star, and review_score.
+
+        Example:
+            >>> order = Order()
+            >>> df = order.get_review_score()
+            >>> df['dim_is_five_star'].sum() > 0
         """
-        pass  # YOUR CODE HERE
+        # Get the reviews dataset
+        reviews = self.data['order_reviews'].copy()
+
+        # Create dummy columns for satisfaction levels
+        reviews['dim_is_five_star'] = reviews['review_score'].map(lambda x: 1 if x == 5 else 0)
+        reviews['dim_is_one_star'] = reviews['review_score'].map(lambda x: 1 if x == 1 else 0)
+
+        # Select only necessary columns
+        return reviews[['order_id', 'dim_is_five_star', 'dim_is_one_star', 'review_score']]
 
     def get_number_items(self):
         """
