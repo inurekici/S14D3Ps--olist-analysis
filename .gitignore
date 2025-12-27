@@ -1,8 +1,17 @@
-data/
-
-.DS_Store
+# Python - Cache and compiled files
 __pycache__/
 *.pyc
-*.pickle
+*.pyo
+*.pyd
+.pytest_cache/
+
+# macOS - System files
+.DS_Store
+
+# Jupyter Notebook
+.ipynb_checkpoints/
+
+# Data and Pickles
 data/
+*.pickle
 !**/tests/*.pickle
