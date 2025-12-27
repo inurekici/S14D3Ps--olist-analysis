@@ -94,13 +94,10 @@ class Order:
             >>> df = order.get_number_items()
             >>> df['number_of_items'].iloc[0] >= 1
         """
-        # Notebook'ta test ettiğin mantığın aynısı:
         items_raw = self.data['order_items'].copy()
 
-        # Gruplama ve sayma işlemi
         items_count = items_raw.groupby('order_id').count()[['product_id']]
 
-        # İsimlendirme ve indeksi sütuna çekme
         items_count.columns = ['number_of_items']
 
         return items_count.reset_index()
@@ -109,8 +106,19 @@ class Order:
         """
         Returns a DataFrame with:
         order_id, number_of_sellers
+
+        Example:
+            >>> order = Order()
+            >>> df = order.get_number_sellers()
+            >>> df['number_of_sellers'].max() == 5
         """
-        pass  # YOUR CODE HERE
+        items = self.data['order_items'].copy()
+
+        number_sellers = items.groupby('order_id')[['seller_id']].nunique()
+
+        number_sellers.columns = ['number_of_sellers']
+
+        return number_sellers.reset_index()
 
     def get_price_and_freight(self):
         """
