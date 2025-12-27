@@ -22,49 +22,30 @@ class Order:
         Example:
             >>> order_instance = Order()
             >>> df = order_instance.get_wait_time(is_delivered=True)
-            >>> df.shape[1] == 5
+            >>> df.shape[0] == 96353
         """
-        # Inspect the 'orders' DataFrame from the instance attribute
+
         orders = self.data['orders'].copy()
 
-        # Filter the DataFrame on 'delivered' orders if requested
         if is_delivered:
             orders = orders.query('order_status == "delivered"').copy()
 
-        # Handle datetime conversions using pandas.to_datetime()
-        # This converts string dates to pandas datetime objects
+        orders = orders.dropna(subset=[
+            'order_purchase_timestamp',
+            'order_delivered_customer_date',
+            'order_estimated_delivery_date'
+        ]).copy()
+
         orders['order_purchase_timestamp'] = pd.to_datetime(orders['order_purchase_timestamp'])
         orders['order_delivered_customer_date'] = pd.to_datetime(orders['order_delivered_customer_date'])
         orders['order_estimated_delivery_date'] = pd.to_datetime(orders['order_estimated_delivery_date'])
 
-        # Calculate 'wait_time' in decimal days starting from 'order_purchase_timestamp'
-        # We divide by np.timedelta64(1, 'D') to get the float representation
-        orders['wait_time'] = (
-            orders['order_delivered_customer_date'] - orders['order_purchase_timestamp']
-        ) / np.timedelta64(1, 'D')
-
-        # Calculate 'expected_wait_time' in decimal days
-        orders['expected_wait_time'] = (
-            orders['order_estimated_delivery_date'] - orders['order_purchase_timestamp']
-        ) / np.timedelta64(1, 'D')
-
-        # Calculate 'delay_vs_expected' in decimal days
-        # If the order was delivered earlier than expected, set it to 0
-        orders['delay_vs_expected'] = (
-            orders['order_delivered_customer_date'] - orders['order_estimated_delivery_date']
-        ) / np.timedelta64(1, 'D')
-
-        # Using clip(lower=0) ensures we replace negative delays with 0
+        orders['wait_time'] = (orders['order_delivered_customer_date'] - orders['order_purchase_timestamp']) / np.timedelta64(1, 'D')
+        orders['expected_wait_time'] = (orders['order_estimated_delivery_date'] - orders['order_purchase_timestamp']) / np.timedelta64(1, 'D')
+        orders['delay_vs_expected'] = (orders['order_delivered_customer_date'] - orders['order_estimated_delivery_date']) / np.timedelta64(1, 'D')
         orders['delay_vs_expected'] = orders['delay_vs_expected'].clip(lower=0)
 
-        # Final DataFrame check (selecting only requested columns)
-        return orders[[
-            'order_id',
-            'wait_time',
-            'expected_wait_time',
-            'delay_vs_expected',
-            'order_status'
-        ]]
+        return orders[['order_id', 'wait_time', 'expected_wait_time', 'delay_vs_expected', 'order_status']]
 
     def get_review_score(self):
         """
@@ -75,14 +56,12 @@ class Order:
             >>> df = order.get_review_score()
             >>> df['dim_is_five_star'].sum() > 0
         """
-        # Get the reviews dataset
+
         reviews = self.data['order_reviews'].copy()
 
-        # Create dummy columns for satisfaction levels
         reviews['dim_is_five_star'] = reviews['review_score'].map(lambda x: 1 if x == 5 else 0)
         reviews['dim_is_one_star'] = reviews['review_score'].map(lambda x: 1 if x == 1 else 0)
 
-        # Select only necessary columns
         return reviews[['order_id', 'dim_is_five_star', 'dim_is_one_star', 'review_score']]
 
     def get_number_items(self):
@@ -157,6 +136,22 @@ class Order:
         'order_status', 'dim_is_five_star', 'dim_is_one_star', 'review_score',
         'number_of_items', 'number_of_sellers', 'price', 'freight_value',
         'distance_seller_customer']
+        Example:
+            >>> order = Order()
+            >>> df = order.get_training_data()
+            >>> df.columns.tolist()
         """
-        # Hint: make sure to re-use your instance methods defined above
-        pass  # YOUR CODE HERE
+
+        df_wait = self.get_wait_time()
+        df_review = self.get_review_score()
+        df_items = self.get_number_items()
+        df_sellers = self.get_number_sellers()
+        df_price = self.get_price_and_freight()
+
+        training_data = df_wait \
+            .merge(df_review, on='order_id') \
+            .merge(df_items, on='order_id') \
+            .merge(df_sellers, on='order_id') \
+            .merge(df_price, on='order_id')
+
+        return training_data
