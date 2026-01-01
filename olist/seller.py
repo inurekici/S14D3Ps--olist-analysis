@@ -140,9 +140,31 @@ class Seller:
         """
         Returns a DataFrame with:
         'seller_id', 'share_of_five_stars', 'share_of_one_stars', 'review_score'
+
+        Example:
+            >>> seller = Seller()
+            >>> df = seller.get_review_score()
+            >>> df.columns.tolist()
+            ['seller_id', 'review_score', 'share_of_one_stars', 'share_of_five_stars']
         """
 
-        pass  # YOUR CODE HERE
+        reviews = self.data['order_reviews'].copy()
+        items = self.data['order_items'].copy()
+
+        matching_table = items.merge(reviews, on='order_id')
+
+        matching_table['is_one_star'] = matching_table['review_score'].apply(lambda x: 1 if x == 1 else 0)
+        matching_table['is_five_star'] = matching_table['review_score'].apply(lambda x: 1 if x == 5 else 0)
+
+        res = matching_table.groupby('seller_id').agg({
+            'review_score': 'mean',
+            'is_one_star': 'mean',
+            'is_five_star': 'mean'
+        }).reset_index()
+
+        res.columns = ['seller_id', 'review_score', 'share_of_one_stars', 'share_of_five_stars']
+
+        return res
 
     def get_training_data(self):
         """
